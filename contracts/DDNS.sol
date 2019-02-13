@@ -23,7 +23,7 @@ contract DDNS is Ownable {
 
     // struct to hold the receipt to track payments made
     struct Receipt {
-        uint amoutPaid; // in wei
+        uint amountPaid; // in wei
         uint timestamp;
         uint expires;
     }
@@ -102,7 +102,168 @@ contract DDNS is Ownable {
 
     /** === EVENTS START === */
 
+    // event to signify registration of a new domain
+    event DomainNameRegistered(
+        uint indexed timestamp,
+        bytes domainName, 
+        bytes12 tld
+    );
+
+    // event to signify renewal of an expired/expiring domain
+    event DomainNameRenewed(
+        uint indexed timestamp,
+        bytes domainName,
+        bytes12 tld,
+        address indexed owner
+    );
+
+    // event to signify a change in the IP of a domain
+    event DomainNameEdited(
+        uint indexed timestamp,
+        bytes domainName,
+        bytes12 tld,
+        bytes15 newIp
+    );
+
+    // event to signify transfer of a domain to a new owner
+    event DomainNameTransferred(
+        uint indexed timestamp,
+        bytes domainName,
+        bytes12 tld,
+        address indexed owner,
+        address newOwner
+    );
+
+    // event to signify returning of change to transaction initiator
+    event PurchaseChangeReturned(
+        uint indexed timestamp,
+        address indexed _owner,
+        uint amount
+    );
+
+    // event to signify the saving of a receipt
+    event ReceiptSaved(
+        uint indexed timestamp,
+        bytes domainName,
+        uint amountInWei,
+        uint expires
+    );
+
     /** === EVENTS END === */
 
+    /** === FUNCTIONS START === */
 
+    /**
+        * @dev getting the unique identifier for a domain
+        * @param domain the domain
+        * @param tld the tld
+        * @return domainHash the domainHash 
+     */
+    function getDomainHash(bytes memory domain, bytes32 tld) public pure returns(bytes32) {
+        return keccak256(abi.encode(domain, tld));
+    }
+
+    /**
+        * @dev getting the unique identifier/key for a receipt
+        * @param domain the domain
+        * @param tld the tld
+        * @return receiptKey the receiptKey
+     */
+    function getReceiptKey(bytes memory domain, bytes12 tld) public view returns(bytes32) {
+        return keccak256(abi.encode(domain, tld, msg.sender, block.timestamp));
+    }
+
+    /**
+        * @dev getting the price of a required domain
+        * @param domain the domain
+     */
+    function getPrice(bytes memory domain) public pure returns(uint) {
+        if(domain.length < DOMAIN_NAME_EXPENSIVE_LENGTH) {
+            return (DOMAIN_NAME_COST + DOMAIN_NAME_COST_SHORT_ADDITION); // additional charges if domain size is smaller than 8 characters
+        }
+
+        return DOMAIN_NAME_COST;
+    }
+
+    /**
+        * @dev registering a new domain
+        * @param domain the domain
+     */
+    function register(bytes memory domain, bytes12 tld, bytes15 ip) 
+    public payable
+    isDomainLengthValid(domain)
+    isTldAllowed(tld)
+    isAvailable(domain, tld)
+    verifyDomainNamePayment(domain)
+    {
+        bytes32 domainHash = getDomainHash(domain, tld); // getting domain hash for the domain
+        DomainRecord memory newDomain = DomainRecord(
+            {
+                name: domain,
+                tld: tld,
+                owner: msg.sender,
+                ipAddress: ip,
+                expires: block.timestamp + DOMAIN_EXPIRATION_DATE
+            }
+        ); // creating a domain record
+        domainNames[domainHash] = newDomain; // mapping the domain hash to the newly created domain record
+
+        Receipt memory newReceipt = Receipt(
+            {
+               amountPaid: msg.value,
+               timestamp: block.timestamp,
+               expires: block.timestamp + DOMAIN_EXPIRATION_DATE
+            }
+        ); // creating a receipt
+        bytes32 receiptKey = getReceiptKey(domain, tld); // getting a receipt key
+        paymentReceipts[msg.sender].push(receiptKey); // saving the receipt key for the transaction initiator
+        receiptDetails[receiptKey] = newReceipt; // mapping the receipt key to the receipt
+
+        emit ReceiptSaved(
+            block.timestamp,
+            domain,
+            DOMAIN_NAME_COST,
+            block.timestamp + DOMAIN_EXPIRATION_DATE
+        );
+
+        emit DomainNameRegistered(
+            block.timestamp,
+            domain, 
+            tld
+        );
+    }
+
+    /** === FUNCTIONS END === */
+
+    /** === GETTER FUNCTIONS START === */
+
+    function getIp(bytes memory domain, bytes12 tld) public view returns(bytes15) {
+        bytes32 domainHash = getDomainHash(domain, tld);
+        return domainNames[domainHash].ipAddress;
+    }
+
+    function getReceiptList() public view returns(bytes32[] memory) {
+        return paymentReceipts[msg.sender];
+    }
+
+    function getReceipt(bytes32 receiptKey) public view returns (uint, uint, uint) {
+        return (
+            receiptDetails[receiptKey].amountPaid,
+            receiptDetails[receiptKey].timestamp,
+            receiptDetails[receiptKey].expires
+        );
+    }
+
+    /** === GETTER FUNCTIONS END === */
+
+    /** === WITHDRAW FN START === */
+    
+    /**
+        * @dev allows owner of DNS system to extract all funds
+    */
+    function withdraw() public onlyOwner {
+        msg.sender.transfer(address(this).balance);
+    }
+
+    /** === WITHDRAW FN END === */
 }
