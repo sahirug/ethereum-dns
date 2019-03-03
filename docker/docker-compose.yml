@@ -29,7 +29,7 @@ services:
     ports:
       - 8545:8545
     volumes:
-      - eth-data-1:/root/.ethash
+      - E:\Projects\Dapps\ethereum-dns\chaindata\1:/root/.ethash
     networks:
       chainnet:
         ipv4_address: 172.25.0.102 # The monitor needs to know this address
@@ -51,7 +51,7 @@ services:
     ports:
       - 8546:8545
     volumes:
-     - eth-data-2:/root/.ethash
+     - E:\Projects\Dapps\ethereum-dns\chaindata\2:/root/.ethash
     networks:
       chainnet:
         ipv4_address: 172.25.0.104
@@ -73,7 +73,7 @@ services:
      ports:
        - 8547:8545
      volumes:
-      - eth-data-3:/root/.ethash
+      - E:\Projects\Dapps\ethereum-dns\chaindata\3:/root/.ethash
      networks:
        chainnet:
          ipv4_address: 172.25.0.110
@@ -108,7 +108,7 @@ networks:
       config:
       - subnet: 172.25.0.0/24
 
-volumes:
-  eth-data-1:
-  eth-data-2:
-  eth-data-3:
+# volumes:
+#   eth-data-1: E:\Projects\Dapps\ethereum-dns\chaindata\1
+#   eth-data-2: E:\Projects\Dapps\ethereum-dns\chaindata\2
+#   eth-data-3: E:\Projects\Dapps\ethereum-dns\chaindata\3
