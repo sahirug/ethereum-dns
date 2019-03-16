@@ -27,7 +27,7 @@ services:
         password: pass
     container_name: geth-miner-1
     ports:
-      - 8545:8545
+      - 8547:8545
     volumes:
       - E:\Projects\Dapps\ethereum-dns\chaindata\1:/root/.ethash
     networks:
@@ -71,7 +71,7 @@ services:
          password: word
      container_name: geth-miner-3
      ports:
-       - 8547:8545
+       - 8545:8545
      volumes:
       - E:\Projects\Dapps\ethereum-dns\chaindata\3:/root/.ethash
      networks:
