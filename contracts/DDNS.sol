@@ -7,8 +7,8 @@ contract DDNS is Ownable {
     using SafeMath for uint256;
 
     constructor() public {
-        register("google", "com", "56.58.159.26");
-        edit("google", "com", "142.65.69.159");
+        register("google", "com", "56.58.159.26", "A");
+        edit("google", "com", "142.65.69.159", "A");
     }
 
     /** === STRUCTS START === */
@@ -18,7 +18,8 @@ contract DDNS is Ownable {
         bytes name;
         bytes12 tld;
         address owner;
-        bytes15[] ipAddress;
+        bytes32[] aRecords;
+        bytes32[] aaaaRecords;
         uint expires;
     }
 
@@ -123,7 +124,7 @@ contract DDNS is Ownable {
         uint indexed timestamp,
         bytes domainName,
         bytes12 tld,
-        bytes15 newIp
+        bytes32 newIp
     );
 
     // event to signify transfer of a domain to a new owner
@@ -166,39 +167,48 @@ contract DDNS is Ownable {
         return keccak256(abi.encodePacked(domain, topLevel));
     }
 
-    function register(bytes memory domain, bytes12 tld, bytes15 ip) public payable
-        isDomainLengthValid(domain)
-        isAvailable(domain, tld){
-            bytes32 domainHash = getDomainHash(domain, tld);
-            bytes15[] memory ipAddresses = new bytes15[](1);
-            ipAddresses[0] = ip;
-            DomainRecord memory newDomain = DomainRecord({
-                name: domain,
-                tld: tld,
-                owner: msg.sender,
-                ipAddress: ipAddresses,
-                expires: block.timestamp + DOMAIN_EXPIRATION_DATE
-            });
-            domainNames[domainHash] = newDomain;
+    function register(bytes memory domain, bytes12 tld, bytes32 ip, bytes32 rType) public payable isDomainLengthValid(domain) isAvailable(domain, tld) {
+        bytes32 domainHash = getDomainHash(domain, tld);
+        bytes32[] memory aAddresses = new bytes32[](1);
+        bytes32[] memory aaaaAddresses = new bytes32[](1);
+        if(rType == "A") {
+            aAddresses[0] = ip;
+        } else {
+            aaaaAddresses[0] = ip;
+        }
+        DomainRecord memory newDomain = DomainRecord({
+            name: domain,
+            tld: tld,
+            owner: msg.sender,
+            aRecords: aAddresses,
+            aaaaRecords: aaaaAddresses,
+            expires: block.timestamp + DOMAIN_EXPIRATION_DATE
+        });
+        domainNames[domainHash] = newDomain;
 
-            emit DomainNameRegistered(
-                block.timestamp,
-                domain, 
-                tld
-            );
+        emit DomainNameRegistered(block.timestamp, domain, tld);
     }
 
-    function edit(bytes memory domain, bytes12 tld, bytes15 newIp) public isDomainOwner(domain, tld) {
+    function edit(bytes memory domain, bytes12 tld, bytes32 newIp, bytes32 rType) public isDomainOwner(domain, tld) {
         bytes32 domainHash = getDomainHash(domain, tld);
-        domainNames[domainHash].ipAddress.push(newIp);
+        if(rType == "A") {
+            domainNames[domainHash].aRecords.push(newIp);
+        } else {
+            domainNames[domainHash].aaaaRecords.push(newIp);
+        }
+        
         emit DomainNameEdited(block.timestamp, domain, tld, newIp);
     }
 
-    function getIp(bytes memory domain, bytes12 tld) public view returns (bytes15[] memory outArr) {
+    function getIp(bytes memory domain, bytes12 tld, bytes32 rType) public view returns (bytes32[] memory outArr) {
         bytes32 domainHash = getDomainHash(domain, tld);
         // bytes15[] outArr;
         // return domainNames[domainHash].ipAddress;
-        outArr = domainNames[domainHash].ipAddress;
+        if(rType == "A") {
+            return domainNames[domainHash].aRecords;
+        } else {
+            return domainNames[domainHash].aaaaRecords;
+        }
     }
 
     /** === FUNCTIONS END === */
