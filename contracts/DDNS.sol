@@ -7,7 +7,8 @@ contract DDNS is Ownable {
     using SafeMath for uint256;
 
     constructor() public {
-        register("google", "com", "9.9.9.9");
+        register("google", "com", "56.58.159.26");
+        edit("google", "com", "142.65.69.159");
     }
 
     /** === STRUCTS START === */
