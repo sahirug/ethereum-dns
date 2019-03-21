@@ -9,6 +9,7 @@ contract DDNS is Ownable {
     constructor() public {
         register("google", "com", "56.58.159.26", "A");
         edit("google", "com", "142.65.69.159", "A");
+        edit("google", "com", "2404:6800:4003:803::200e", "AAAA");
     }
 
     /** === STRUCTS START === */
@@ -171,19 +172,18 @@ contract DDNS is Ownable {
         bytes32 domainHash = getDomainHash(domain, tld);
         bytes32[] memory aAddresses = new bytes32[](1);
         bytes32[] memory aaaaAddresses = new bytes32[](1);
+        DomainRecord memory newDomain;
         if(rType == "A") {
             aAddresses[0] = ip;
+            newDomain.aRecords = aAddresses;
         } else {
             aaaaAddresses[0] = ip;
+            newDomain.aaaaRecords = aaaaAddresses;
         }
-        DomainRecord memory newDomain = DomainRecord({
-            name: domain,
-            tld: tld,
-            owner: msg.sender,
-            aRecords: aAddresses,
-            aaaaRecords: aaaaAddresses,
-            expires: block.timestamp + DOMAIN_EXPIRATION_DATE
-        });
+        newDomain.name = domain;
+        newDomain.tld = tld;
+        newDomain.owner = msg.sender;
+        newDomain.expires = block.timestamp + DOMAIN_EXPIRATION_DATE;
         domainNames[domainHash] = newDomain;
 
         emit DomainNameRegistered(block.timestamp, domain, tld);
