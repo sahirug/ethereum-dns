@@ -16,12 +16,17 @@ contract DDNS is Ownable {
 
     // struct to hold the domain record
     struct DomainRecord {
-        bytes name;
+        bytes32 name;
         bytes12 tld;
         address owner;
         bytes32[] aRecords;
         bytes32[] aaaaRecords;
         uint expires;
+    }
+
+    struct DomainTLD{
+        bytes32 name;
+        bytes12[] tlds;
     }
 
     // struct to hold the receipt to track payments made
@@ -48,13 +53,15 @@ contract DDNS is Ownable {
     mapping (bytes32 => DomainRecord) public domainNames; // mapping domain record to a domain hash
     mapping (address => bytes32[]) public paymentReceipts; // mapping all the receipt hashes to an addres
     mapping (bytes32 => Receipt) public receiptDetails; // mapping a receipt to the receipt Hash
+    mapping (address => bytes32[]) public addressDomains; // mapping to keep domains owned by address
+    mapping (bytes32 => bytes12[]) public domainTLD; // mapping to keep tld's per domain
 
     /** === CONTRACT VARIABLES AND CONSTANTS END === */
 
     /** === MODIFIERS START */
 
     // check if domain is available
-    modifier isAvailable(bytes memory domain, bytes12 tld) {
+    modifier isAvailable(bytes32 domain, bytes12 tld) {
         bytes32 domainHash = getDomainHash(domain, tld);
         require(
             domainNames[domainHash].expires < block.timestamp,
@@ -74,7 +81,7 @@ contract DDNS is Ownable {
     }
 
     // check if initiator is owner of domain when required
-    modifier isDomainOwner(bytes memory domain, bytes12 tld) {
+    modifier isDomainOwner(bytes32 domain, bytes12 tld) {
         bytes32 domainHash = getDomainHash(domain, tld);
         require(
             domainNames[domainHash].owner == msg.sender,
@@ -84,7 +91,7 @@ contract DDNS is Ownable {
     }
 
     // check if domain length is greater than minimum length
-    modifier isDomainLengthValid(bytes memory domain) {
+    modifier isDomainLengthValid(bytes32 domain) {
         require(
             domain.length >= DOMAIN_NAME_MIN_LENGTH,
             "Domain name is too short"
@@ -108,7 +115,7 @@ contract DDNS is Ownable {
     // event to signify registration of a new domain
     event DomainNameRegistered(
         uint indexed timestamp,
-        bytes domainName, 
+        bytes32 domainName, 
         bytes12 tld
     );
 
@@ -123,7 +130,7 @@ contract DDNS is Ownable {
     // event to signify a change in the IP of a domain
     event DomainNameEdited(
         uint indexed timestamp,
-        bytes domainName,
+        bytes32 domainName,
         bytes12 tld,
         bytes32 newIp
     );
@@ -164,11 +171,15 @@ contract DDNS is Ownable {
         return DOMAIN_NAME_COST;
     }
 
-    function getDomainHash(bytes memory domain, bytes12 topLevel) public pure returns(bytes32){
+    function getDomainHash(bytes32 domain, bytes12 topLevel) public pure returns(bytes32){
         return keccak256(abi.encodePacked(domain, topLevel));
     }
 
-    function register(bytes memory domain, bytes12 tld, bytes32 ip, bytes32 rType) public payable isDomainLengthValid(domain) isAvailable(domain, tld) {
+    function getDomainNameHash(bytes32 domain) public pure returns(bytes32){
+        return keccak256(abi.encodePacked(domain));
+    }
+
+    function register(bytes32 domain, bytes12 tld, bytes32 ip, bytes32 rType) public payable isDomainLengthValid(domain) isAvailable(domain, tld) {
         bytes32 domainHash = getDomainHash(domain, tld);
         bytes32[] memory aAddresses = new bytes32[](1);
         bytes32[] memory aaaaAddresses = new bytes32[](1);
@@ -186,10 +197,14 @@ contract DDNS is Ownable {
         newDomain.expires = block.timestamp + DOMAIN_EXPIRATION_DATE;
         domainNames[domainHash] = newDomain;
 
+        addressDomains[msg.sender].push(domain);
+
+        domainTLD[domain].push(tld);
+
         emit DomainNameRegistered(block.timestamp, domain, tld);
     }
 
-    function edit(bytes memory domain, bytes12 tld, bytes32 newIp, bytes32 rType) public isDomainOwner(domain, tld) {
+    function edit(bytes32 domain, bytes12 tld, bytes32 newIp, bytes32 rType) public isDomainOwner(domain, tld) {
         bytes32 domainHash = getDomainHash(domain, tld);
         if(rType == "A") {
             domainNames[domainHash].aRecords.push(newIp);
@@ -200,7 +215,7 @@ contract DDNS is Ownable {
         emit DomainNameEdited(block.timestamp, domain, tld, newIp);
     }
 
-    function getIp(bytes memory domain, bytes12 tld, bytes32 rType) public view returns (bytes32[] memory outArr) {
+    function getIp(bytes32 domain, bytes12 tld, bytes32 rType) public view returns (bytes32[] memory outArr) {
         bytes32 domainHash = getDomainHash(domain, tld);
         // bytes15[] outArr;
         // return domainNames[domainHash].ipAddress;
@@ -209,6 +224,24 @@ contract DDNS is Ownable {
         } else {
             return domainNames[domainHash].aaaaRecords;
         }
+    }
+
+    function getDomainsForAddress() public view returns (bytes32[] memory){
+        return addressDomains[msg.sender];
+    }
+
+    function getTldForDomain(bytes32 domain) public view returns (bytes12[] memory) {
+        return domainTLD[domain];
+    }
+
+    function editDomain(bytes32 domain, bytes12 tld, bytes32 newIp, uint key, bytes32 rType) public {
+        bytes32 domainHash = getDomainHash(domain, tld);
+        if(rType == "A") {
+            domainNames[domainHash].aRecords[key] = newIp;
+        } else {
+            domainNames[domainHash].aaaaRecords[key] = newIp;
+        }
+
     }
 
     /** === FUNCTIONS END === */

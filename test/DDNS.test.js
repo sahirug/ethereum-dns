@@ -27,81 +27,91 @@ contract('DDNService', (accounts) => {
         assert.ok(contract);
     });
 
-    // it('Throw error when domain name exists and still valid', async () => {
-    //     const domainName = web3.utils.utf8ToHex("sahirug");
-    //     const ipAddr = web3.utils.utf8ToHex("127.0.0.1");
-    //     const tld = web3.utils.utf8ToHex(".com");        
-    //     const price = await contract.getPrice(domainName);
+    it('registers a domain', async () => {
+        const domainName = web3.utils.utf8ToHex('youtube');
+        const tld = web3.utils.utf8ToHex('com');
+        const ipAddr = web3.utils.utf8ToHex('1.2.3.4');
+        const rType = web3.utils.utf8ToHex('A');
+        const price = await contract.getPrice(domainName);
 
-    //     await contract.register(domainName, tld, ipAddr, { from: accounts[0], value: price });
-    //     const result = await contract.register(domainName, tld, ipAddr, { from: accounts[0], value: price });
-    //     await assertRevert(result);
+        await contract.register(domainName, tld, ipAddr, rType, { from: accounts[0], value: price });
+        let ips = await contract.getIp(domainName, tld, rType);
+        ips = ips.map((ip, key) => {
+            return web3.utils.hexToUtf8(ip);
+        });
+        assert.equal('1.2.3.4', ips[0]);
+    });
+
+    it('throws an error when trying to register same domain twice', async () => {
+        const domainName = web3.utils.utf8ToHex('youtube');
+        const tld = web3.utils.utf8ToHex('com');
+        const ipAddr = web3.utils.utf8ToHex('1.2.3.4');
+        const rType = web3.utils.utf8ToHex('A');
+        const price = await contract.getPrice(domainName);
+
+        // const result = await contract.register(domainName, tld, ipAddr, rType, { from: accounts[0], value: price });
+        // await assertRevert(result);
+    });
+
+    it('can edit a domain', async () => {
+        const domainName = web3.utils.utf8ToHex('youtube');
+        const tld = web3.utils.utf8ToHex('com');
+        const ipAddr = web3.utils.utf8ToHex('2.3.4.5');
+        const rType = web3.utils.utf8ToHex('A');
+
+        await contract.edit(domainName, tld, ipAddr, rType, { from: accounts[0] });
+        let ips = await contract.getIp(domainName, tld, rType);
+        ips = ips.map((ip, key) => {
+            return web3.utils.hexToUtf8(ip);
+        });
+        assert.equal('1.2.3.4', ips[0]);
+        assert.equal('2.3.4.5', ips[1]);
+    });
+
+    // it('can edit a domain', async () => {
+    //     const domainName = web3.utils.utf8ToHex('youtube');
+    //     const tld = web3.utils.utf8ToHex('com');
+    //     const ipAddr = web3.utils.utf8ToHex('2.3.4.5');
+    //     const rType = web3.utils.utf8ToHex('A');
+
+    //     await contract.edit(domainName, tld, ipAddr, rType, { from: accounts[1] });
     // });
 
-    it('resolves yahoo', async () => {
-        const domainName = web3.utils.utf8ToHex("yahoo");
-        const ipAddr = web3.utils.utf8ToHex("1.2.3.4");
-        const tld = web3.utils.utf8ToHex("com");        
-        const price = await contract.getPrice(domainName);
-
-        // console.log(await contract.getDomainHash(domainName, tld));
-
-        await contract.register(domainName, tld, ipAddr, {
-            from: accounts[0],
-            value: price
+    it('retrieves all domains for an address', async () => {
+        let domains = await contract.getDomainsForAddress();
+        domains = domains.map(domain => {
+            return web3.utils.hexToUtf8(domain);
         });
-
-        const ips = await contract.getIp(domainName, tld);
-        ips.forEach(ip => {
-            assert.equal("1.2.3.4", web3.utils.hexToUtf8(ip));
-        })
+        console.log(domains);
     });
 
-    it('resolves google', async () => {
-        const domainName = web3.utils.utf8ToHex("google");
-        const tld = web3.utils.utf8ToHex("com");        
-        const price = await contract.getPrice(domainName);
-
-        const ips = await contract.getIp(domainName, tld);
-        ips.forEach(ip => {
-            assert.equal("9.9.9.9", web3.utils.hexToUtf8(ip));
-        })
-    });
-
-    it('saves state', async() => {
-        const google = web3.utils.utf8ToHex("google");
-        const yahoo = web3.utils.utf8ToHex("yahoo");
-        const tld = web3.utils.utf8ToHex("com"); 
-        
-        const googleIps = await contract.getIp(google, tld);
-        googleIps.forEach(googleIp => {
-            assert.equal("9.9.9.9", web3.utils.hexToUtf8(googleIp));
-        })
-
-        const yahooIps = await contract.getIp(yahoo, tld);
-        yahooIps.forEach(yahooIp => {
-            assert.equal("1.2.3.4", web3.utils.hexToUtf8(yahooIp));
-        })
-    });
-
-    it('edit a domain', async() => {
-        const yahoo = web3.utils.utf8ToHex("yahoo");
-        const tld = web3.utils.utf8ToHex("com");
-        const newIp = web3.utils.utf8ToHex("5.5.5.5");
-        await contract.edit(yahoo, tld, newIp, {
-            from: accounts[0]
+    it('retrieves tlds for a domain', async () => {
+        let domains = await contract.getDomainsForAddress();
+        domains = domains.map(async (domain) => {
+            let tlds = await contract.getTldForDomain(domain);
+            console.log(web3.utils.hexToUtf8(domain), tlds);
         });
+        // let tld = await contract.getTldForDomain('');
     });
 
-    it('checks if domain was edtited', async() => {
-        const yahoo = web3.utils.utf8ToHex("yahoo");
-        const tld = web3.utils.utf8ToHex("com");
-        const ips = await contract.getIp(yahoo, tld);
+    it('edits a domain', async () => {
+        const domainName = web3.utils.utf8ToHex('youtube');
+        const tld = web3.utils.utf8ToHex('com');
+        const ipAddr = web3.utils.utf8ToHex('1.2.3.4');
+        const newIp = web3.utils.utf8ToHex('4.5.6.7');
+        const rType = web3.utils.utf8ToHex('A');
 
-        requiredIps = ["1.2.3.4", "5.5.5.5"];
-
-        ips.forEach((ip, key) => {
-            assert.equal(requiredIps[key], web3.utils.hexToUtf8(ip));
+        let ips = await contract.getIp(domainName, tld, rType);
+        ips = ips.map((ip, key) => {
+            return web3.utils.hexToUtf8(ip);
         });
+        console.log('Before edit: ', ips);
+
+        ips = await contract.editDomain(domainName, tld, newIp, 0, rType);
+        ips = await contract.getIp(domainName, tld, rType);
+        ips = ips.map((ip, key) => {
+            return web3.utils.hexToUtf8(ip);
+        });
+        console.log('After edit: ', ips);
     });
 });
