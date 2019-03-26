@@ -5,21 +5,11 @@ import {
 
 class DnsForm extends Component {
 
-    componentDidMount() {
-        const { formData } = this.props;
-        console.log('componentdidmount', formData);
-        let data = {};
-        formData.forEach(field => {
-            data[field.key] = field.defaultValue;
-        });
-        this.props.form.setFieldsValue(data);
-    }
-
     handleSubmit = (e) => {
         e.preventDefault();
         this.props.form.validateFieldsAndScroll((err, values) => {
             if (!err) {
-                console.log('Received values of form: ', values);
+                this.props.submitHandler(values);
             }
         });
     }
@@ -31,11 +21,12 @@ class DnsForm extends Component {
             return (
                 <Form.Item label={field.label} key={index}>
                     {getFieldDecorator(field.key, {
+                        initialValue: field.defaultValue,
                         rules: [{
                             required: true, message: 'Please input a ' + field.label,
                         }]
                     })(
-                        <Input disabled={field.disabled} />
+                        <Input disabled={field.disabled}/>
                     )}
                 </Form.Item>
             );

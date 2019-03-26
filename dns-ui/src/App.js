@@ -31,7 +31,7 @@ class App extends Component {
     this.setState({
       account: accounts[0]
     });
-    let domains = this.getAccountDetails().then(domains => console.log(domains));
+    let domains = this.getAccountDetails();
     // console.log('domains: ', domains);
     // this.setState({
     //   domains
@@ -40,7 +40,6 @@ class App extends Component {
 
   getAccountDetails = async () => {
     const { account, domains } = this.state;
-    let acc = await web3.eth.accounts[0];
     console.log('account: ', account);
     let domainsFromBlockchain = await ddns.methods.getDomainsForAddress(account).call();
     domainsFromBlockchain = domainsFromBlockchain.map(async (domain) => {
@@ -81,6 +80,12 @@ class App extends Component {
         key: 'newIp',
         disabled: false,
         defaultValue: ''
+      },
+      {
+        label: 'RType',
+        key: 'rType',
+        disabled: true,
+        defaultValue: record.rType
       }
     ];
     console.log('formdata', formData);
@@ -98,8 +103,22 @@ class App extends Component {
     });
   }
 
-  editIp = () => {
-    console.log('edit ip');
+  editIp = async (values) => {
+    const { currentDomain, account } = this.state;
+    let domainData = currentDomain.split(".");
+    let domainName = this.convertToHex(domainData[0]);
+    let tld = this.convertToHex(domainData[1], 12);
+    let newIp = this.convertToHex(values.newIp);
+    let key = values.key;
+    let rType = this.convertToHex(values.rType);
+
+    await ddns.methods.editDomain(domainName, tld, newIp, key, rType).send({ from: account });
+
+    this.handleMenuClick({ key: currentDomain });
+
+    this.setState({
+      modalVisible: false
+    });
   }
 
   convertToHex = (string, len = 32) => {
@@ -116,6 +135,9 @@ class App extends Component {
         onEdit: this.showEditIpModal
       };
       data.ips = await this.loadIpsForDomain(val.key);
+      this.setState({
+        currentDomain: val.key
+      });
     } else {
       data = {};
     }
@@ -187,10 +209,12 @@ class App extends Component {
           footer={[
             null,
           ]}
+          closable={false}
         >
           <WrappedDnsForm 
             formData={formData}
             cancelHandler={this.cancelModal}
+            submitHandler={this.editIp}
           />
         </Modal>
       </Layout>

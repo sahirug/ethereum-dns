@@ -14,7 +14,6 @@ class Sidebar extends Component {
 
     populateSubMenu = () => {
         const { data } = this.props;
-        console.log(data);
         let renderedSubmenu = data.map((domain, index) => {
             return (
                 <SubMenu
