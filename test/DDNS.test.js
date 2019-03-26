@@ -78,7 +78,7 @@ contract('DDNService', (accounts) => {
     // });
 
     it('retrieves all domains for an address', async () => {
-        let domains = await contract.getDomainsForAddress();
+        let domains = await contract.getDomainsForAddress(accounts[1]);
         domains = domains.map(domain => {
             return web3.utils.hexToUtf8(domain);
         });

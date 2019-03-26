@@ -10,6 +10,15 @@ contract DDNS is Ownable {
         register("google", "com", "56.58.159.26", "A");
         edit("google", "com", "142.65.69.159", "A");
         edit("google", "com", "2404:6800:4003:803::200e", "AAAA");
+        addTldToDomain("google", "lk", "55.45.32.95", "A");
+        edit("google", "lk", "78.65.14.14", "A");
+
+        register("wikipedia", "com", "65.158.128.35", "A");
+        edit("wikipedia", "com", "15.26.114.193", "A");
+        edit("wikipedia", "com", "15.26.114.193", "A");
+        edit("wikipedia", "com", "3515:7911:5114:904::311d", "AAAA");
+        addTldToDomain("wikipedia", "lk", "65.45.45.85", "A");
+        edit("wikipedia", "lk", "14.25.65.88", "A");        
     }
 
     /** === STRUCTS START === */
@@ -204,6 +213,29 @@ contract DDNS is Ownable {
         emit DomainNameRegistered(block.timestamp, domain, tld);
     }
 
+    function addTldToDomain(bytes32 domain, bytes12 tld, bytes32 ip, bytes32 rType) public payable isDomainLengthValid(domain) isAvailable(domain, tld) {
+        bytes32 domainHash = getDomainHash(domain, tld);
+        bytes32[] memory aAddresses = new bytes32[](1);
+        bytes32[] memory aaaaAddresses = new bytes32[](1);
+        DomainRecord memory newDomain;
+        if(rType == "A") {
+            aAddresses[0] = ip;
+            newDomain.aRecords = aAddresses;
+        } else {
+            aaaaAddresses[0] = ip;
+            newDomain.aaaaRecords = aaaaAddresses;
+        }
+        newDomain.name = domain;
+        newDomain.tld = tld;
+        newDomain.owner = msg.sender;
+        newDomain.expires = block.timestamp + DOMAIN_EXPIRATION_DATE;
+        domainNames[domainHash] = newDomain;
+
+        domainTLD[domain].push(tld);
+
+        // emit DomainNameRegistered(block.timestamp, domain, tld);
+    }
+
     function edit(bytes32 domain, bytes12 tld, bytes32 newIp, bytes32 rType) public isDomainOwner(domain, tld) {
         bytes32 domainHash = getDomainHash(domain, tld);
         if(rType == "A") {
@@ -226,8 +258,8 @@ contract DDNS is Ownable {
         }
     }
 
-    function getDomainsForAddress() public view returns (bytes32[] memory){
-        return addressDomains[msg.sender];
+    function getDomainsForAddress(address sender) public view returns (bytes32[] memory){
+        return addressDomains[sender];
     }
 
     function getTldForDomain(bytes32 domain) public view returns (bytes12[] memory) {
