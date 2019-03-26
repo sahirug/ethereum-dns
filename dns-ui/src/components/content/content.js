@@ -1,12 +1,13 @@
 import React, { Component } from 'react';
-import { Layout, Breadcrumb, Statistic, Row, Col, Button } from 'antd';
+import { Layout, Breadcrumb, Statistic, Row, Col, Button, Divider, Table, Tag } from 'antd';
 
 const { Content } = Layout;
 
 class DnsContent extends Component {
 
     state = {
-        collapsed: false
+        collapsed: false,
+        data: []
     };
 
     renderProfile = () => {
@@ -34,23 +35,53 @@ class DnsContent extends Component {
     }
 
     renderIps = () => {
+        let { data } = this.props;
+
+        let columns = [
+            { title: 'Address', dataIndex: 'ip', key: 'ip' },
+            {
+                title: 'Type',
+                dataIndex: 'rType',
+                key: 'rType',
+                render: rType => {
+                    let color = rType == "A" ? 'geekblue' : 'green';
+                    let type = rType == "A" ? 'IPv4' : 'IPv6';
+                    return (
+                        <Tag color={color} key={rType}>{type}</Tag>
+                    );
+                }
+            },
+            {
+                title: 'Actions',
+                key: 'actions',
+                render: (text, record) => {
+                    return (
+                        <span>
+                            <Button type="primary" onClick={() => {data.handlers.onEdit(record, data.title)}}>Edit</Button>
+                            <Divider type="vertical" />
+                            <Button type="danger">Remove</Button>
+                        </span>
+                    );
+                }
+            },
+        ];
+
         return (
             <Content style={{ margin: "0 16px" }}>
                 <Breadcrumb style={{ margin: "16px 0" }}>
-                    <Breadcrumb.Item>User</Breadcrumb.Item>
-                    <Breadcrumb.Item>Bill</Breadcrumb.Item>
+                    <Breadcrumb.Item>Domains</Breadcrumb.Item>
+                    <Breadcrumb.Item>google.com</Breadcrumb.Item>
                 </Breadcrumb>
-                <div style={{ padding: 24, background: "#fff", minHeight: 360 }}>
-                    Bill is a cat.
-                </div>
+                <Table columns={columns} dataSource={data.ips} />
             </Content>
         );
     }
 
     render() {
         const { type } = this.props;
+
         return (
-            type === 'profile' ? this.renderProfile() : this.renderIps()  
+            type === 'profile' ? this.renderProfile() : this.renderIps()
         );
     }
 }

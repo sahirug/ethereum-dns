@@ -5,3 +5,7 @@ export function capitalizeFirstLetter (string) {
 export function keepOnlyCharacters(string) {
     return string.replace(/[^a-zA-Z]+/g, '');
 }
+
+export function keepIpCharacters(string) {
+    return string.replace(/[^a-zA-Z1-90:.]+/g, '');
+}

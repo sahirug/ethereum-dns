@@ -23,7 +23,7 @@ class Sidebar extends Component {
                 >
                     {domain.tlds.map((tld, index) => {
                         return (
-                            <Menu.Item key={'sub'+index} onClick={this.props.onClick}>{tld}</Menu.Item>
+                            <Menu.Item key={domain.domainName+'.'+tld} onClick={this.props.onClick}>{tld}</Menu.Item>
                         );
                     })}                    
                 </SubMenu>
