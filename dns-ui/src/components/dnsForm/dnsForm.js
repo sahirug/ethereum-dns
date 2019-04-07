@@ -63,7 +63,7 @@ class DnsForm extends Component {
                 {this.generateFormFields()}
                 <Form.Item {...tailFormItemLayout}>
                     <Button type="default" style={{ marginRight: '50px' }} onClick={this.props.cancelHandler}>Cancel</Button>
-                    <Button type="primary" htmlType="submit">Register</Button>
+                    <Button type="primary" htmlType="submit">Edit</Button>
                 </Form.Item>
             </Form>
         );

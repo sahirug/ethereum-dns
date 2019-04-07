@@ -19,7 +19,8 @@ class App extends Component {
     viewType: 'profile',
     domains: [],
     formData: [],
-    modalVisible: false
+    modalVisible: false,
+    currentDomain: 'Account'
   };
 
   componentWillMount() {
@@ -128,6 +129,7 @@ class App extends Component {
   handleMenuClick = async (val) => {
     let viewType = 'profile';
     let data = {};
+    let currentDomain = '';
     if (val.key != 1) {
       viewType = 'ips';
       data.title = val.key;
@@ -135,15 +137,15 @@ class App extends Component {
         onEdit: this.showEditIpModal
       };
       data.ips = await this.loadIpsForDomain(val.key);
-      this.setState({
-        currentDomain: val.key
-      });
+      currentDomain = val.key;
     } else {
       data = {};
+      currentDomain = 'Account';
     }
     this.setState({
       viewType,
-      data
+      data,
+      currentDomain
     });
   }
 
@@ -181,7 +183,7 @@ class App extends Component {
   }
 
   render() {
-    const { viewType, data, formData } = this.state;
+    const { viewType, data, formData, currentDomain } = this.state;
     let { domains } = this.state;
     if (domains == undefined) {
       domains = [];
@@ -195,7 +197,7 @@ class App extends Component {
         <Layout>
           <Header style={{ background: "#fff", padding: 0 }}>
             <div style={{ marginLeft: 15 }}>
-              <h1>Account: </h1>
+              <h1>{currentDomain}</h1>
             </div>
           </Header>
           <DnsContent type={viewType} data={data} /> 
@@ -204,7 +206,7 @@ class App extends Component {
           </Footer>
         </Layout>
         <Modal
-          title="Basic Modal"
+          title="Edit Domain"
           visible={this.state.modalVisible}
           footer={[
             null,
