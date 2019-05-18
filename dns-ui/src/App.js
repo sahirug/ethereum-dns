@@ -3,9 +3,9 @@ import Web3 from "web3";
 // import logo from './logo.svg';
 import './App.css';
 import Sidebar from './components/sidebar/sidebar';
-import { Layout, Modal } from 'antd';
+import { Layout, Modal, Button } from 'antd';
 import DnsContent from './components/content/content';
-import WrappedDnsForm  from './components/dnsForm/dnsForm';
+import WrappedDnsForm from './components/dnsForm/dnsForm';
 import { abi, address } from "./config";
 import { keepOnlyCharacters, keepIpCharacters } from "./utils";
 
@@ -20,7 +20,8 @@ class App extends Component {
     domains: [],
     formData: [],
     modalVisible: false,
-    currentDomain: 'Account'
+    currentDomain: 'Account',
+    isAddingTLD: false,
   };
 
   componentWillMount() {
@@ -33,15 +34,15 @@ class App extends Component {
       account: accounts[0]
     });
     let domains = this.getAccountDetails();
-    // console.log('domains: ', domains);
     // this.setState({
     //   domains
     // });
   }
 
   getAccountDetails = async () => {
-    const { account, domains } = this.state;
-    console.log('account: ', account);
+    const { account } = this.state;
+    let { domains } = this.state;
+    domains = [];
     let domainsFromBlockchain = await ddns.methods.getDomainsForAddress(account).call();
     domainsFromBlockchain = domainsFromBlockchain.map(async (domain) => {
       let tlds = await ddns.methods.getTldForDomain(domain).call();
@@ -89,7 +90,6 @@ class App extends Component {
         defaultValue: record.rType
       }
     ];
-    console.log('formdata', formData);
     let modalVisible = true;
     this.setState({
       formData,
@@ -97,10 +97,128 @@ class App extends Component {
     });
   }
 
+  showAddDomainModal = () => {
+    let formData = [
+      {
+        label: 'Domain',
+        key: 'domain',
+        disabled: false,
+      },
+      {
+        label: 'TLD',
+        key: 'tld',
+        type: 'select',
+        options: [
+          {
+            id: 'com',
+            label: 'com'
+          },
+          {
+            id: 'org',
+            label: 'org'
+          },
+          {
+            id: 'lk',
+            label: 'lk'
+          }
+        ],
+        disabled: true,
+      },
+      {
+        label: 'IP',
+        key: 'newIp',
+        disabled: false,
+      },
+      {
+        label: 'RType',
+        key: 'rType',
+        type: 'select',
+        options: [
+          {
+            id: 'A',
+            label: 'A'
+          },
+          {
+            id: 'AAAA',
+            label: 'AAAA'
+          }
+        ],
+        disabled: true,
+      }
+    ];
+    let modalVisible = true;
+    this.setState({
+      formData,
+      modalVisible
+    });
+  }
+
+  showAddTldModal = () => {
+    const { currentDomain } = this.state;
+    let domainName = currentDomain.split('.')[0];
+    let formData = [
+      {
+        label: 'Domain',
+        key: 'domain',
+        disabled: true,
+        defaultValue: domainName
+      },
+      {
+        label: 'TLD',
+        key: 'tld',
+        type: 'select',
+        options: [
+          {
+            id: 'com',
+            label: 'com'
+          },
+          {
+            id: 'org',
+            label: 'org'
+          },
+          {
+            id: 'lk',
+            label: 'lk'
+          }
+        ],
+        disabled: true,
+      },
+      {
+        label: 'New Ip',
+        key: 'newIp',
+        disabled: false,
+      },
+      {
+        label: 'RType',
+        key: 'rType',
+        type: 'select',
+        options: [
+          {
+            id: 'A',
+            label: 'A'
+          },
+          {
+            id: 'AAAA',
+            label: 'AAAA'
+          }
+        ],
+        disabled: true,
+      }
+    ];
+    let modalVisible = true;
+    let isAddingTLD = true;
+    this.setState({
+      formData,
+      modalVisible,
+      isAddingTLD
+    });
+  }
+
   cancelModal = () => {
     this.setState({
       formData: [],
-      modalVisible: false
+      modalVisible: false,
+      isAddingTLD: false
     });
   }
 
@@ -118,6 +236,30 @@ class App extends Component {
     this.handleMenuClick({ key: currentDomain });
 
     this.setState({
+      modalVisible: false
+    });
+  }
+
+  addIp = async (values) => {
+    let { account } = this.state;
+    let domainName = this.convertToHex(values.domain);
+    let tld = this.convertToHex(values.tld, 12);
+    let newIp = this.convertToHex(values.newIp);
+    let rType = this.convertToHex(values.rType);
+
+    await ddns.methods.register(domainName, tld, newIp, rType).send({ from: account });
+
+    this.setState({
+      modalVisible: false
+    });
+
+    this.getAccountDetails();
+  }
+
+  addTld = async (values) => {
+    console.log('adding tld');
+    this.setState({
+      isAddingTLD: false,
       modalVisible: false
     });
   }
@@ -140,6 +282,9 @@ class App extends Component {
       currentDomain = val.key;
     } else {
       data = {};
+      data.handlers = {
+        addNewDomain: this.showAddDomainModal
+      };
       currentDomain = 'Account';
     }
     this.setState({
@@ -183,11 +328,19 @@ class App extends Component {
   }
 
   render() {
-    const { viewType, data, formData, currentDomain } = this.state;
-    let { domains } = this.state;
+    const { viewType, formData, currentDomain, isAddingTLD } = this.state;
+    let { domains, data } = this.state;
     if (domains == undefined) {
       domains = [];
     }
+
+    if (data === undefined) {
+      data = {};
+      data.handlers = {
+        addNewDomain: this.showAddDomainModal
+      };
+    }
+
     return (
       <Layout style={{ minHeight: '100vh' }}>
         <Sidebar
@@ -197,10 +350,14 @@ class App extends Component {
         <Layout>
           <Header style={{ background: "#fff", padding: 0 }}>
             <div style={{ marginLeft: 15 }}>
-              <h1>{currentDomain}</h1>
+              <h1>
+                {currentDomain} 
+                {currentDomain !== 'Account' ? <span style={{ float: 'right', marginRight: '30px' }}><Button type="primary" ghost onClick={this.showAddTldModal}> Add TLD </Button></span> : 
+                                                <span style={{ float: 'right', marginRight: '30px' }}><Button type="primary" ghost> Help </Button></span>}
+              </h1>
             </div>
           </Header>
-          <DnsContent type={viewType} data={data} /> 
+          <DnsContent type={viewType} data={data} />
           <Footer style={{ textAlign: "center" }}>
             EthDNS ©2019 Created by sahirug@gmail.com
           </Footer>
@@ -213,10 +370,11 @@ class App extends Component {
           ]}
           closable={false}
         >
-          <WrappedDnsForm 
+          <WrappedDnsForm
             formData={formData}
             cancelHandler={this.cancelModal}
-            submitHandler={this.editIp}
+            submitHandler={viewType === 'profile' ? this.addIp : isAddingTLD ? this.addTld :  this.editIp}
+            scope={viewType}
           />
         </Modal>
       </Layout>

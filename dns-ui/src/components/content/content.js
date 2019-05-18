@@ -11,6 +11,7 @@ class DnsContent extends Component {
     };
 
     renderProfile = () => {
+        const { data } = this.props;
         return (
             <Content style={{ margin: "0 16px" }}>
                 <Breadcrumb style={{ margin: "16px 0" }}>
@@ -27,6 +28,10 @@ class DnsContent extends Component {
                         </Col>
                         <Col span={4}>
                             <Statistic title="Registered Domains" value={2} />
+                        </Col>
+                        <Col span={6}>
+                            <h6>Register a new Domain Here</h6>
+                            <Button type="primary" size={'large'} onClick={data.handlers.addNewDomain}>Register Domain</Button>
                         </Col>
                     </Row>
                 </div>
@@ -57,7 +62,7 @@ class DnsContent extends Component {
                 render: (text, record) => {
                     return (
                         <span>
-                            <Button type="primary" onClick={() => {data.handlers.onEdit(record, data.title)}}>Edit</Button>
+                            <Button type="primary" onClick={() => { data.handlers.onEdit(record, data.title) }}>Edit</Button>
                             <Divider type="vertical" />
                             <Button type="danger">Remove</Button>
                         </span>

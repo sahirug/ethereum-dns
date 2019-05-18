@@ -3,7 +3,23 @@ import {
     Form, Input, Tooltip, Icon, Cascader, Select, Row, Col, Checkbox, Button, AutoComplete,
 } from 'antd';
 
+const Option = Select.Option;
+
 class DnsForm extends Component {
+
+    renderSelect = (options) => {
+        return (
+            <Select>
+                {
+                    options.map(option => {
+                        return(
+                            <Option value={option.id} key={option.id}>{option.label}</Option>
+                        );
+                    })
+                }
+            </Select>
+        );
+    }
 
     handleSubmit = (e) => {
         e.preventDefault();
@@ -26,7 +42,8 @@ class DnsForm extends Component {
                             required: true, message: 'Please input a ' + field.label,
                         }]
                     })(
-                        <Input disabled={field.disabled}/>
+                        field.type === undefined ? <Input disabled={field.disabled}/> : 
+                        field.type === 'select' ? this.renderSelect(field.options) : <Input disabled={field.disabled}/>
                     )}
                 </Form.Item>
             );
@@ -57,13 +74,13 @@ class DnsForm extends Component {
             },
         };
 
-        const { context } = this.props;
+        const { context, scope } = this.props;
         return (
             <Form {...formItemLayout} onSubmit={this.handleSubmit}>
                 {this.generateFormFields()}
                 <Form.Item {...tailFormItemLayout}>
                     <Button type="default" style={{ marginRight: '50px' }} onClick={this.props.cancelHandler}>Cancel</Button>
-                    <Button type="primary" htmlType="submit">Edit</Button>
+                    <Button type="primary" htmlType="submit">{ scope === 'profile' ? 'Add' : 'Edit' }</Button>
                 </Form.Item>
             </Form>
         );
