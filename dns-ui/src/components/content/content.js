@@ -40,7 +40,7 @@ class DnsContent extends Component {
     }
 
     renderIps = () => {
-        let { data } = this.props;
+        let { data, miscFuncs } = this.props;
 
         let columns = [
             { title: 'Address', dataIndex: 'ip', key: 'ip' },
@@ -77,7 +77,10 @@ class DnsContent extends Component {
                     <Breadcrumb.Item>Domains</Breadcrumb.Item>
                     <Breadcrumb.Item>google.com</Breadcrumb.Item>
                 </Breadcrumb>
-                <Table columns={columns} dataSource={data.ips} />
+                <Table columns={columns} dataSource={data.ips} pagination={false}/>
+                <div style={{ float: 'right', marginTop: '20px' }}>
+                    <Button type="primary" ghost onClick={miscFuncs.addIpModal}>Add IP</Button>
+                </div>
             </Content>
         );
     }

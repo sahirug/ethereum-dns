@@ -22,10 +22,13 @@ class App extends Component {
     modalVisible: false,
     currentDomain: 'Account',
     isAddingTLD: false,
+    isAddingIp: false,
+    allDomains: []
   };
 
   componentWillMount() {
     this.getAccount();
+    this.getAllDomains();
   }
 
   getAccount = async () => {
@@ -37,6 +40,18 @@ class App extends Component {
     // this.setState({
     //   domains
     // });
+  }
+
+  getAllDomains = async () => {
+    let domains = await ddns.methods.getAllDomains().call();
+    // domains.forEach(domain => {
+    //   console.log((web3.utils.hexToNumberString(domain)) === '0');
+    // });
+    domains = domains.filter(domain => web3.utils.hexToNumberString(domain) !== '0');
+    domains = domains.map(domain => keepOnlyCharacters(web3.utils.hexToAscii(domain)));
+    this.setState({
+      allDomains: domains
+    });
   }
 
   getAccountDetails = async () => {
@@ -103,6 +118,10 @@ class App extends Component {
         label: 'Domain',
         key: 'domain',
         disabled: false,
+        validators: [
+          { validator: this.validateUniqueDomainName },
+          { pattern: new RegExp("^[a-zA-Z0-9]*$"), message: 'Domain cannot have any special characters' }
+        ]
       },
       {
         label: 'TLD',
@@ -128,6 +147,9 @@ class App extends Component {
         label: 'IP',
         key: 'newIp',
         disabled: false,
+        validators: [
+          { pattern: new RegExp("\\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\.|$)){4}\\b"), message: 'IP has to be valid format' }
+        ]
       },
       {
         label: 'RType',
@@ -154,8 +176,23 @@ class App extends Component {
   }
 
   showAddTldModal = () => {
-    const { currentDomain } = this.state;
+    const { currentDomain, domains } = this.state;
     let domainName = currentDomain.split('.')[0];
+    let savedDomain = domains.find(domain => domain.domainName === domainName);
+
+    let unsavedTlds = ["com", "org", "lk"].filter(tld => {
+      if (savedDomain.tlds.indexOf(tld) === -1) {
+        return tld;
+      }
+    });
+
+    unsavedTlds = unsavedTlds.map(tld => {
+      return {
+        id: tld,
+        label: tld
+      };
+    });
+
     let formData = [
       {
         label: 'Domain',
@@ -167,20 +204,7 @@ class App extends Component {
         label: 'TLD',
         key: 'tld',
         type: 'select',
-        options: [
-          {
-            id: 'com',
-            label: 'com'
-          },
-          {
-            id: 'org',
-            label: 'org'
-          },
-          {
-            id: 'lk',
-            label: 'lk'
-          }
-        ],
+        options: unsavedTlds,
         disabled: true,
       },
       {
@@ -214,11 +238,61 @@ class App extends Component {
     });
   }
 
+  showAddIpModal = () => {
+    const { currentDomain } = this.state;
+
+    let formData = [
+      {
+        label: 'Domain',
+        key: 'domain',
+        disabled: true,
+        defaultValue: currentDomain.split('.')[0]
+      },
+      {
+        label: 'TLD',
+        key: 'tld',
+        disabled: true,
+        defaultValue: currentDomain.split('.')[1]
+      },
+      {
+        label: 'New Ip',
+        key: 'newIp',
+        disabled: false,
+        // defaultValue: ''
+      },
+      {
+        label: 'RType',
+        key: 'rType',
+        type: 'select',
+        options: [
+          {
+            id: 'A',
+            label: 'A'
+          },
+          {
+            id: 'AAAA',
+            label: 'AAAA'
+          }
+        ],
+        disabled: true,
+      }
+    ];
+
+    let modalVisible = true;
+    let isAddingIp = true;
+    this.setState({
+      formData,
+      modalVisible,
+      isAddingIp
+    });
+  }
+
   cancelModal = () => {
     this.setState({
       formData: [],
       modalVisible: false,
-      isAddingTLD: false
+      isAddingTLD: false,
+      isAddingIp: false
     });
   }
 
@@ -240,8 +314,8 @@ class App extends Component {
     });
   }
 
-  addIp = async (values) => {
-    let { account } = this.state;
+  addDomain = async (values) => {
+    let { account, allDomains } = this.state;
     let domainName = this.convertToHex(values.domain);
     let tld = this.convertToHex(values.tld, 12);
     let newIp = this.convertToHex(values.newIp);
@@ -249,17 +323,41 @@ class App extends Component {
 
     await ddns.methods.register(domainName, tld, newIp, rType).send({ from: account });
 
+    allDomains.push(values.domain);
+
     this.setState({
-      modalVisible: false
+      modalVisible: false,
+      allDomains
     });
 
     this.getAccountDetails();
   }
 
   addTld = async (values) => {
-    console.log('adding tld');
+    const { account } = this.state;
+    let domainName = this.convertToHex(values.domain);
+    let tld = this.convertToHex(values.tld, 12);
+    let newIp = this.convertToHex(values.newIp);
+    let rType = this.convertToHex(values.rType);
+
+    await ddns.methods.addTldToDomain(domainName, tld, newIp, rType).send({ from: account });
     this.setState({
       isAddingTLD: false,
+      modalVisible: false
+    });
+  }
+
+  addIp = async (values) => {
+    const { account } = this.state;
+    let domainName = this.convertToHex(values.domain);
+    let tld = this.convertToHex(values.tld, 12);
+    let newIp = this.convertToHex(values.newIp);
+    let rType = this.convertToHex(values.rType);
+
+    await ddns.methods.edit(domainName, tld, newIp, rType).send({ from: account });
+
+    this.setState({
+      isAddingIp: false,
       modalVisible: false
     });
   }
@@ -327,8 +425,25 @@ class App extends Component {
     return data;
   }
 
+  validateUniqueDomainName = (rule, value, callback) => {
+    let { allDomains } = this.state;
+    if (false || value && allDomains.includes(value)) {
+      callback('Domain Name exists!');
+    } else {
+      callback();
+    }
+  }
+
+  testValidation = (rule, value, callback) => {
+    if (false || value && value !== 'a') {
+      callback('Two passwords that you enter is inconsistent!');
+    } else {
+      callback();
+    }
+  }
+
   render() {
-    const { viewType, formData, currentDomain, isAddingTLD } = this.state;
+    const { viewType, formData, currentDomain, isAddingTLD, isAddingIp } = this.state;
     let { domains, data } = this.state;
     if (domains == undefined) {
       domains = [];
@@ -351,13 +466,13 @@ class App extends Component {
           <Header style={{ background: "#fff", padding: 0 }}>
             <div style={{ marginLeft: 15 }}>
               <h1>
-                {currentDomain} 
-                {currentDomain !== 'Account' ? <span style={{ float: 'right', marginRight: '30px' }}><Button type="primary" ghost onClick={this.showAddTldModal}> Add TLD </Button></span> : 
-                                                <span style={{ float: 'right', marginRight: '30px' }}><Button type="primary" ghost> Help </Button></span>}
+                {currentDomain}
+                {currentDomain !== 'Account' ? <span style={{ float: 'right', marginRight: '30px' }}><Button type="primary" ghost onClick={this.showAddTldModal}> Add TLD </Button></span> :
+                  <span style={{ float: 'right', marginRight: '30px' }}><Button type="primary" ghost> Help </Button></span>}
               </h1>
             </div>
           </Header>
-          <DnsContent type={viewType} data={data} />
+          <DnsContent type={viewType} data={data} miscFuncs={{ addIpModal: this.showAddIpModal }} />
           <Footer style={{ textAlign: "center" }}>
             EthDNS ©2019 Created by sahirug@gmail.com
           </Footer>
@@ -373,7 +488,7 @@ class App extends Component {
           <WrappedDnsForm
             formData={formData}
             cancelHandler={this.cancelModal}
-            submitHandler={viewType === 'profile' ? this.addIp : isAddingTLD ? this.addTld :  this.editIp}
+            submitHandler={viewType === 'profile' ? this.addDomain : isAddingTLD ? this.addTld : isAddingIp ? this.addIp : this.editIp}
             scope={viewType}
           />
         </Modal>

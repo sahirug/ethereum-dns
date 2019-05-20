@@ -65,6 +65,8 @@ contract DDNS is Ownable {
     mapping (address => bytes32[]) public addressDomains; // mapping to keep domains owned by address
     mapping (bytes32 => bytes12[]) public domainTLD; // mapping to keep tld's per domain
 
+    bytes32[] public domains = new bytes32[](100);
+
     /** === CONTRACT VARIABLES AND CONSTANTS END === */
 
     /** === MODIFIERS START */
@@ -210,6 +212,8 @@ contract DDNS is Ownable {
 
         domainTLD[domain].push(tld);
 
+        domains.push(domain);
+
         emit DomainNameRegistered(block.timestamp, domain, tld);
     }
 
@@ -274,6 +278,10 @@ contract DDNS is Ownable {
             domainNames[domainHash].aaaaRecords[key] = newIp;
         }
 
+    }
+
+    function getAllDomains() public view returns (bytes32[] memory) {
+        return domains;
     }
 
     /** === FUNCTIONS END === */

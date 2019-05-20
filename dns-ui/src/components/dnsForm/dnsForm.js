@@ -12,7 +12,7 @@ class DnsForm extends Component {
             <Select>
                 {
                     options.map(option => {
-                        return(
+                        return (
                             <Option value={option.id} key={option.id}>{option.label}</Option>
                         );
                     })
@@ -30,20 +30,36 @@ class DnsForm extends Component {
         });
     }
 
+    testValidation = (rule, value, callback) => {
+        const form = this.props.form;
+        if (false || value && value !== 'a') {
+            callback('Two passwords that you enter is inconsistent!');
+        } else {
+            callback();
+        }
+    }
+
     generateFormFields = () => {
         const { formData } = this.props;
         const { getFieldDecorator } = this.props.form;
+        const customValidator = [
+            {
+                validator: this.testValidation
+            }
+        ];
         return formData.map((field, index) => {
             return (
                 <Form.Item label={field.label} key={index}>
                     {getFieldDecorator(field.key, {
                         initialValue: field.defaultValue,
-                        rules: [{
-                            required: true, message: 'Please input a ' + field.label,
-                        }]
+                        rules: [
+                            {
+                                required: true, message: 'Please input a ' + field.label,
+                            }, ...(field.validators ? field.validators : [])
+                        ]
                     })(
-                        field.type === undefined ? <Input disabled={field.disabled}/> : 
-                        field.type === 'select' ? this.renderSelect(field.options) : <Input disabled={field.disabled}/>
+                        field.type === undefined ? <Input disabled={field.disabled} /> :
+                            field.type === 'select' ? this.renderSelect(field.options) : <Input disabled={field.disabled} />
                     )}
                 </Form.Item>
             );
@@ -80,7 +96,7 @@ class DnsForm extends Component {
                 {this.generateFormFields()}
                 <Form.Item {...tailFormItemLayout}>
                     <Button type="default" style={{ marginRight: '50px' }} onClick={this.props.cancelHandler}>Cancel</Button>
-                    <Button type="primary" htmlType="submit">{ scope === 'profile' ? 'Add' : 'Edit' }</Button>
+                    <Button type="primary" htmlType="submit">{scope === 'profile' ? 'Add' : 'Edit'}</Button>
                 </Form.Item>
             </Form>
         );

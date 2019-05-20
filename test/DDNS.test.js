@@ -105,4 +105,14 @@ contract('DDNService', (accounts) => {
             // console.log(web3.utils.hexToUtf8(domain), tlds);
         });
     });
+
+    it('retrieves all registered domains', async () => {
+        let domains = await contract.getAllDomains();
+        domains.map(domain => {
+            let domainString = web3.utils.hexToUtf8(domain);
+            if(domainString !== '') {
+                console.log(domainString);
+            }
+        });
+    });
 });
